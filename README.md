@@ -7,7 +7,7 @@ The tool requires Python 3 environment. I recommend to install Anaconda which is
 After the Anaconda is installed, open the Anaconda prompt console. First, install the [Hyperspy](https://hyperspy.org/):  ``conda install hyperspy -c conda-forge``. Then, simply navigate to the ``EMD Converter\`` folder with ``cd [PATH]`` and run ``pip install ./``. The pip should install the package automatically. 
 
 ## 2. Usage
-Simply type "emd-con" in the Anaconda prompt console. A GUI will pop up. Just load the emd files, set the output directory, select the output format, and click "Let's go!". 
+Simply type ``emd-con`` in the Anaconda prompt console. A GUI will pop up. Just load the emd files, set the output directory, select the output format, and click "Let's go!". 
 
 ## 3. Formats
 When selecting '.tif' format, the software converts the images into 16-bit tif files containing the pixel resolution. For DigitalMicrograph users, you can simply drag the converted tif files into GMS, which should be able to read the data including the pixel size losslessly. This is the most convenient way to convert emd files into GMS I have found so far.
