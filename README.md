@@ -10,6 +10,10 @@ After the Anaconda is installed, open the Anaconda prompt console. First, instal
 Simply type ``emd-con`` in the Anaconda prompt console. A GUI will pop up. Just load the emd files, set the output directory, select the output format, and click "Let's go!". 
 
 ## 3. Formats
+### 3.1 Input formats
+The main purpose of this app is to convert FEI Velox emd files. However, due to the power of Hyperspy, it takes all formats that are supported by Hyperspy. A complete list of supported formats can be found [here](http://hyperspy.org/hyperspy-doc/current/user_guide/io.html). Tested formats are: __Velox emd, TIA ser, and GMS dm3 & dm4__.
+
+### 3.2 Output formats
 When selecting '.tif' format, the software converts the images into 16-bit tif files containing the pixel resolution. For DigitalMicrograph users, you can simply drag the converted tif files into GMS, which should be able to read the data including the pixel size losslessly. This is the most convenient way to convert emd files into GMS I have found so far.
 
 PNG files are lossless, too, and can be imported into many other software like Microsoft Office, ImageJ, LaTeX, etc. Note that GMS does not take png files.
