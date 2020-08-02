@@ -11,8 +11,10 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 import sys
+import os
 import numpy as np
 from skimage import exposure, img_as_ubyte
+from PIL import Image, ImageDraw, ImageFont
 
 class Ui_EMD_converter(QtWidgets.QMainWindow):
     def __init__(self):
@@ -77,7 +79,7 @@ class Ui_EMD_converter(QtWidgets.QMainWindow):
         self.label.setText(_translate("EMD_converter", "Covnert to"))
         self.pushButton_2.setText(_translate("EMD_converter", "Output \n"
 "directory"))
-        self.checkBox.setText(_translate("EMD_converter", "Overwrite"))
+        self.checkBox.setText(_translate("EMD_converter", "Scale bar"))
         self.pushButton_3.setText(_translate("EMD_converter", "Let\'s go!"))
         self.label_2.setText(_translate("EMD_converter", "EMD converter v0.1 by Dr. Tao Ma    taoma@umich.edu"))
         
@@ -86,7 +88,7 @@ class Ui_EMD_converter(QtWidgets.QMainWindow):
 
     def openfile(self):
         global files, output_dir
-        files, _ = QFileDialog.getOpenFileNames(self,"Select emd files to be converted:", "","Velox emd Files (*.emd);;All Files (*)")
+        files, _ = QFileDialog.getOpenFileNames(self,"Select files to be converted:", "","Velox emd Files (*.emd);;TIA ser Files (*.ser);;DigitalMicrograph Files (*.dm3 *.dm4);;All Files (*)")
         if files:
 #            print(files)
             output_dir = getDirectory(files[0],s='/')
@@ -102,7 +104,7 @@ class Ui_EMD_converter(QtWidgets.QMainWindow):
 
     def set_dir(self):
         global output_dir
-        output_dir = str(QFileDialog.getExistingDirectory(self, "Select Directory"))
+        output_dir = str(QFileDialog.getExistingDirectory(self, "Select Directory") + '/')
         if output_dir:
             self.textEdit_2.setText(output_dir)
             
@@ -110,18 +112,21 @@ class Ui_EMD_converter(QtWidgets.QMainWindow):
 # Let's go button connected to pushButton_3
 
     def convert_emd(self):
-        global f_type, ow
+        global f_type, scale_bar
         f_type = self.comboBox.currentText()
         
         if self.checkBox.isChecked():
-            ow = True
+            scale_bar = True
         else:
-            ow = False
+            scale_bar = False
         self.textEdit_3.append('Converting, please wait...') 
         QtWidgets.QApplication.processEvents()
         for file in files:
-            convert_emd_with_hs(file,output_dir,f_type)
-            msg = "'{}.emd' has been converted".format(getFileName(file))
+            try:
+                convert_emd_with_hs(file,output_dir,f_type)
+                msg = "'{}.{}' has been converted".format(getFileName(file),getFileType(file))
+            except:
+                msg = "'{}.emd' has been skipped".format(getFileName(file),getFileType(file))
             self.textEdit_3.append(msg)
             QtWidgets.QApplication.processEvents()
         self.textEdit_3.append('Conversion finished!')        
@@ -145,22 +150,68 @@ def getFileName(file):
     f_name = full_name[len(full_path):-1]
     return f_name
 
+def getFileType(file):
+    full_name = getDirectory(file)
+    file_type = file[len(full_name):]
+    return file_type
+
 def save_emd_as(emd_file, f_name, output_dir, f_type):
-    data = np.array(emd_file.data)
-    if f_type == '.jpg' or f_type == '.bmp':
-        #Rescale and convert the data to uint8 for jpg and bmp
-        emd_file.data = img_as_ubyte(exposure.rescale_intensity(data))
-    if f_type == '.png':
-        emd_file.data = exposure.rescale_intensity(data)
+    #Save images
     #Reset the scale and origin for the intensity
     try:
         emd_file.metadata.Signal.Noise_properties.Variance_linear_model.gain_factor = 1
         emd_file.metadata.Signal.Noise_properties.Variance_linear_model.gain_offset = 0
     except:
         pass
-    emd_file.save(output_dir + f_name + f_type, overwrite=ow)
+    #Check if the output_dir exists
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     
-
+    if f_type == '.tif':
+        # For tif format, save directly as 16-bit with calibration, no scalebar
+        # No manipulation of data
+        emd_file.save(output_dir + f_name + f_type, overwrite=True)
+        
+    elif f_type == '.jpg' or f_type == '.bmp' or f_type == '.png':
+        #Rescale and convert the data to uint8
+        #data = img_as_ubyte(exposure.rescale_intensity(emd_file.data))
+        data = img_as_ubyte(exposure.equalize_hist(emd_file.data))
+        im = Image.fromarray(data)
+        if scale_bar == True:
+            #Add a scale bar
+            im_x, im_y = im.size
+            scale = emd_file.axes_manager[0].scale
+            unit = emd_file.axes_manager[0].units
+            fov_x = im_x * scale
+            # Find a good integer length for the scalebar 
+            sb_len_float = fov_x / 6 #Scalebar length is about 1/6 of FOV
+            # A list of allowed lengths for the scalebar
+            sb_lst = [0.1,0.2,0.5,1,2,5,10,20,50,100,200,500,1000,2000,5000]
+            # Find the closest value in the list
+            sb_len = sorted(sb_lst, key=lambda a: abs(a - sb_len_float))[0]
+            sb_len_px = sb_len / scale
+            sb_start_x, sb_start_y = (im_x / 12, im_y *11 / 12) #Bottom left corner from 1/12 of FOV
+            draw = ImageDraw.Draw(im)
+            sb = (sb_start_x, sb_start_y, sb_start_x + sb_len_px, sb_start_y + im_y/ 100)
+            outline_width = round(im_y/500)
+            if outline_width == 0:
+                outline_width = 1
+            draw.rectangle(sb, fill = 'white', outline = 'black', width = outline_width)
+            # Add text
+            text = str(sb_len) + ' ' + unit
+            fontsize = int(im_x / 20)
+            try: 
+                font = ImageFont.truetype("arial.ttf", fontsize)
+            except:
+                font = ImageFont.load_default()
+            txt_x, txt_y = (sb_start_x * 1.2, sb_start_y - fontsize * 1.2 - im_y/100)
+            # Add outline to the text
+            draw.text((txt_x-1, txt_y-1), text, font=font, fill='black')
+            draw.text((txt_x+1, txt_y-1), text, font=font, fill='black')
+            draw.text((txt_x-1, txt_y+1), text, font=font, fill='black')
+            draw.text((txt_x+1, txt_y+1), text, font=font, fill='black')
+            draw.text((txt_x, txt_y), text, fill='white', font=font, anchor=None)
+        im.save(output_dir + f_name + f_type)
         
         
 def convert_emd_with_hs(file, output_dir, f_type):
@@ -169,12 +220,12 @@ def convert_emd_with_hs(file, output_dir, f_type):
     f_emd = load(file,lazy=True)
     f_name = getFileName(file)
     if len(f_emd) == 1: #Single file, the simplest dataset
-        if f_emd.metadata.Signal.signal_type == 'image':
+        if f_emd.axes_manager.signal_dimension == 2:
             save_emd_as(f_emd, f_name, output_dir, f_type=f_type)
     else:
         new_dir = output_dir + f_name + '/'
         for idx in range(len(f_emd)):
-            if f_emd[idx].metadata.Signal.signal_type == 'image':
+            if f_emd[idx].axes_manager.signal_dimension == 2:
                 title = f_emd[idx].metadata.General.title
                 s_lst = list(f_emd[idx])
                 for i_idx in range(len(s_lst)):
