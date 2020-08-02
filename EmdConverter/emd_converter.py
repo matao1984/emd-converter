@@ -122,11 +122,11 @@ class Ui_EMD_converter(QtWidgets.QMainWindow):
         self.textEdit_3.append('Converting, please wait...') 
         QtWidgets.QApplication.processEvents()
         for file in files:
-            try:
-                convert_emd_with_hs(file,output_dir,f_type)
-                msg = "'{}.{}' has been converted".format(getFileName(file),getFileType(file))
-            except:
-                msg = "'{}.emd' has been skipped".format(getFileName(file),getFileType(file))
+   #         try:
+            convert_emd_with_hs(file,output_dir,f_type)
+            msg = "'{}.{}' has been converted".format(getFileName(file),getFileType(file))
+   #         except:
+   #             msg = "'{}.{}' has been skipped".format(getFileName(file),getFileType(file))
             self.textEdit_3.append(msg)
             QtWidgets.QApplication.processEvents()
         self.textEdit_3.append('Conversion finished!')        
@@ -174,8 +174,7 @@ def save_emd_as(emd_file, f_name, output_dir, f_type):
         
     elif f_type == '.jpg' or f_type == '.bmp' or f_type == '.png':
         #Rescale and convert the data to uint8
-        #data = img_as_ubyte(exposure.rescale_intensity(emd_file.data))
-        data = img_as_ubyte(exposure.equalize_hist(emd_file.data))
+        data = img_as_ubyte(exposure.rescale_intensity(emd_file.data))
         im = Image.fromarray(data)
         if scale_bar == True:
             #Add a scale bar
