@@ -38,8 +38,8 @@ class Ui_EMD_converter(QtWidgets.QMainWindow):
         self.label.setGeometry(QtCore.QRect(40, 100, 91, 16))
         self.label.setObjectName("label")
         self.comboBox = QtWidgets.QComboBox(EMD_converter)
-        self.comboBox.setGeometry(QtCore.QRect(130, 100, 73, 22))
-        self.comboBox.addItems(['.tif', '.png', '.jpg','.bmp'])
+        self.comboBox.setGeometry(QtCore.QRect(130, 100, 95, 22))
+        self.comboBox.addItems(['tif + png','tif', 'png', 'jpg','bmp'])
 
         self.comboBox.setObjectName("comboBox")
         self.pushButton_2 = QtWidgets.QPushButton(EMD_converter)
@@ -74,7 +74,7 @@ class Ui_EMD_converter(QtWidgets.QMainWindow):
 
     def retranslateUi(self, EMD_converter):
         _translate = QtCore.QCoreApplication.translate
-        EMD_converter.setWindowTitle(_translate("EMD_converter", "EMD_converter v0.1"))
+        EMD_converter.setWindowTitle(_translate("EMD_converter", "EMD_converter v0.2"))
         self.pushButton.setText(_translate("EMD_converter", "Open files"))
         self.label.setText(_translate("EMD_converter", "Covnert to"))
         self.pushButton_2.setText(_translate("EMD_converter", "Output \n"
@@ -121,12 +121,12 @@ class Ui_EMD_converter(QtWidgets.QMainWindow):
             scale_bar = False
         self.textEdit_3.append('Converting, please wait...') 
         QtWidgets.QApplication.processEvents()
-        for file in files:
-   #         try:
-            convert_emd_with_hs(file,output_dir,f_type)
-            msg = "'{}.{}' has been converted".format(getFileName(file),getFileType(file))
-   #         except:
-   #             msg = "'{}.{}' has been skipped".format(getFileName(file),getFileType(file))
+        for file in files:        
+            try:
+                convert_emd_with_hs(file,output_dir,f_type)
+                msg = "'{}.{}' has been converted".format(getFileName(file),getFileType(file))
+            except:
+                msg = "'{}.{}' has been skipped".format(getFileName(file),getFileType(file))
             self.textEdit_3.append(msg)
             QtWidgets.QApplication.processEvents()
         self.textEdit_3.append('Conversion finished!')        
@@ -167,12 +167,12 @@ def save_emd_as(emd_file, f_name, output_dir, f_type):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     
-    if f_type == '.tif':
+    if f_type == 'tif':
         # For tif format, save directly as 16-bit with calibration, no scalebar
         # No manipulation of data
-        emd_file.save(output_dir + f_name + f_type, overwrite=True)
+        emd_file.save(output_dir + f_name + '.' + f_type, overwrite=True)
         
-    elif f_type == '.jpg' or f_type == '.bmp' or f_type == '.png':
+    elif f_type == 'tif + png' or 'jpg' or f_type == 'bmp' or f_type == 'png':
         #Rescale and convert the data to uint8
         data = img_as_ubyte(exposure.rescale_intensity(emd_file.data))
         im = Image.fromarray(data)
@@ -202,7 +202,10 @@ def save_emd_as(emd_file, f_name, output_dir, f_type):
             try: 
                 font = ImageFont.truetype("arial.ttf", fontsize)
             except:
-                font = ImageFont.load_default()
+                try: 
+                    font = ImageFont.truetype("Helvetica.ttc", fontsize)
+                except:
+                    font = ImageFont.load_default()
             txt_x, txt_y = (sb_start_x * 1.2, sb_start_y - fontsize * 1.2 - im_y/100)
             # Add outline to the text
             draw.text((txt_x-1, txt_y-1), text, font=font, fill='black')
@@ -210,7 +213,11 @@ def save_emd_as(emd_file, f_name, output_dir, f_type):
             draw.text((txt_x-1, txt_y+1), text, font=font, fill='black')
             draw.text((txt_x+1, txt_y+1), text, font=font, fill='black')
             draw.text((txt_x, txt_y), text, fill='white', font=font, anchor=None)
-        im.save(output_dir + f_name + f_type)
+        if f_type == 'tif + png':
+            emd_file.save(output_dir + f_name + '.tif', overwrite=True)
+            f_type = 'png'
+            
+        im.save(output_dir + f_name + '.' + f_type)
         
         
 def convert_emd_with_hs(file, output_dir, f_type):
@@ -222,14 +229,34 @@ def convert_emd_with_hs(file, output_dir, f_type):
         if f_emd.axes_manager.signal_dimension == 2:
             save_emd_as(f_emd, f_name, output_dir, f_type=f_type)
     else:
-        new_dir = output_dir + f_name + '/'
         for idx in range(len(f_emd)):
-            if f_emd[idx].axes_manager.signal_dimension == 2:
-                title = f_emd[idx].metadata.General.title
-                s_lst = list(f_emd[idx])
-                for i_idx in range(len(s_lst)):
-                    new_name = '{}_{}_{}'.format(title, idx, i_idx) 
-                    save_emd_as(s_lst[i_idx], new_name, new_dir, f_type=f_type)
+            if len(f_emd[idx]) != 1:
+                DCFI = 1
+                break
+            else:
+                DCFI = 0
+        if DCFI == 0:#EMD file contains multiple images, e.g., HAADF, BF, DF2,...
+            for idx in range(len(f_emd)):
+                if f_emd[idx].axes_manager.signal_dimension == 2:#This is a 2D image
+                    title = f_emd[idx].metadata.General.title
+                    new_name = f_name + '_' + title
+                    save_emd_as(f_emd[idx], new_name, output_dir, f_type=f_type)
+
+        if DCFI == 1:#Make a folder for DCFI type images
+            new_dir = output_dir + f_name + '/'
+            for idx in range(len(f_emd)):
+#                print('idx={}'.format(idx))
+                if f_emd[idx].axes_manager.signal_dimension == 2:#This is a 2D image
+                    title = f_emd[idx].metadata.General.title
+                    s_lst = list(f_emd[idx])
+                    for i_idx in range(len(s_lst)):
+#                        print('i_idx={}'.format(i_idx))
+                        new_name = '{}_{}_{}'.format(title, idx, i_idx)
+                        save_emd_as(s_lst[i_idx], new_name, new_dir, f_type=f_type)
+
+            
+
+        
 
 
 #====Application entry==================================
