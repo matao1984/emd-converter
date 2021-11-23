@@ -81,7 +81,7 @@ class Ui_EMD_converter(QtWidgets.QMainWindow):
 "directory"))
         self.checkBox.setText(_translate("EMD_converter", "Scale bar"))
         self.pushButton_3.setText(_translate("EMD_converter", "Let\'s go!"))
-        self.label_2.setText(_translate("EMD_converter", "EMD converter v0.1 by Dr. Tao Ma    taoma@umich.edu"))
+        self.label_2.setText(_translate("EMD_converter", "EMD converter by Dr. Tao Ma    taoma@umich.edu"))
         
 #===================================================================
 # Open file button connected to pushButton
