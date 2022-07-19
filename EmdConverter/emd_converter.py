@@ -16,6 +16,9 @@ import numpy as np
 from skimage import exposure, img_as_ubyte
 from PIL import Image, ImageDraw, ImageFont
 
+ver = '0.3'
+rdate = 'Jul-19-2021'
+
 class Ui_EMD_converter(QtWidgets.QMainWindow):
     def __init__(self):
         super(Ui_EMD_converter,self).__init__()
@@ -27,7 +30,7 @@ class Ui_EMD_converter(QtWidgets.QMainWindow):
 
     def setupUi(self, EMD_converter):
         EMD_converter.setObjectName("EMD_converter")
-        EMD_converter.resize(456, 300)
+        EMD_converter.resize(456, 340)
         self.pushButton = QtWidgets.QPushButton(EMD_converter)
         self.pushButton.setGeometry(QtCore.QRect(30, 20, 91, 61))
         self.pushButton.setObjectName("pushButton")
@@ -59,8 +62,18 @@ class Ui_EMD_converter(QtWidgets.QMainWindow):
         self.textEdit_3.setGeometry(QtCore.QRect(130, 210, 301, 61))
         self.textEdit_3.setObjectName("textEdit_3")
         self.label_2 = QtWidgets.QLabel(EMD_converter)
-        self.label_2.setGeometry(QtCore.QRect(30, 280, 351, 16))
+        self.label_2.setGeometry(QtCore.QRect(30, 315, 351, 16))
         self.label_2.setObjectName("label_2")
+        
+        self.pushButton_4 = QtWidgets.QPushButton(EMD_converter)
+        self.pushButton_4.setGeometry(QtCore.QRect(30, 280, 90, 30))
+        self.pushButton_4.setObjectName("pushButton_4")
+        self.pushButton_5 = QtWidgets.QPushButton(EMD_converter)
+        self.pushButton_5.setGeometry(QtCore.QRect(150, 280, 90, 30))
+        self.pushButton_5.setObjectName("pushButton_5")
+        self.pushButton_6 = QtWidgets.QPushButton(EMD_converter)
+        self.pushButton_6.setGeometry(QtCore.QRect(270, 280, 130, 30))
+        self.pushButton_6.setObjectName("pushButton_4")
 
         self.retranslateUi(EMD_converter)
         QtCore.QMetaObject.connectSlotsByName(EMD_converter)
@@ -70,19 +83,25 @@ class Ui_EMD_converter(QtWidgets.QMainWindow):
         self.pushButton.clicked.connect(self.openfile)
         self.pushButton_2.clicked.connect(self.set_dir)
         self.pushButton_3.clicked.connect(self.convert_emd)
+        self.pushButton_4.clicked.connect(self.show_about)
+        self.pushButton_5.clicked.connect(self.show_contact)
+        self.pushButton_6.clicked.connect(self.donate)
         
 
     def retranslateUi(self, EMD_converter):
         _translate = QtCore.QCoreApplication.translate
-        EMD_converter.setWindowTitle(_translate("EMD_converter", "EMD_converter v0.2"))
+        EMD_converter.setWindowTitle(_translate("EMD_converter", "EMD converter Ver {}".format(ver)))
         self.pushButton.setText(_translate("EMD_converter", "Open files"))
         self.label.setText(_translate("EMD_converter", "Covnert to"))
         self.pushButton_2.setText(_translate("EMD_converter", "Output \n"
 "directory"))
         self.checkBox.setText(_translate("EMD_converter", "Scale bar"))
         self.pushButton_3.setText(_translate("EMD_converter", "Let\'s go!"))
-        self.label_2.setText(_translate("EMD_converter", "EMD converter by Dr. Tao Ma    taoma@umich.edu"))
+        self.label_2.setText(_translate("EMD_converter", "EMD converter by Dr. Tao Ma   {}".format(rdate)))
         
+        self.pushButton_4.setText(_translate("EMD_converter", "About"))
+        self.pushButton_5.setText(_translate("EMD_converter", "Contact"))
+        self.pushButton_6.setText(_translate("EMD_converter", "Buy me a LUNCH!"))
 #===================================================================
 # Open file button connected to pushButton
 
@@ -130,6 +149,45 @@ class Ui_EMD_converter(QtWidgets.QMainWindow):
             self.textEdit_3.append(msg)
             QtWidgets.QApplication.processEvents()
         self.textEdit_3.append('Conversion finished!')        
+        
+#=====================================================================        
+    def show_about(self):
+        msg = QMessageBox()
+#        msg.setIcon(QMessageBox.Information)
+        msg.setText("EMD converter: a tool to convert Velox emd files and more to tiff, png, bmp, and jpg."\
+                    "<br>"\
+                    "This app was designed by Dr. Tao Ma"\
+                    "<br>"\
+                    "Version: {}  Released: {}"\
+                    "<br>"\
+                    "Hope you get good results and publications from it!"\
+                    "<br>"\
+                    "Get more information and source code from <a href=\"https://github.com/matao1984/emd-converter\">here</a>.".format(ver, rdate))
+        msg.setWindowTitle(ver + ": About")
+
+        returnValue = msg.exec()
+
+#=====================================================================        
+    def show_contact(self):
+        msg = QMessageBox()
+        msg.setText("Ask questions and report bugs to:"\
+                    "<br>"
+                    "<a href=\"mailto:matao1984@gmail.com\">matao1984@gmail.com</a>")
+        msg.setWindowTitle(ver + ": Contact")
+
+        returnValue = msg.exec()
+        
+#====================================================================
+        
+    def donate(self):
+        msg = QMessageBox()
+        msg.setText("I will make this app freely available for the society.<br>"\
+                    "If you like this app, show your appreciation and <a href=\"https://www.paypal.com/donate/?business=ZCSWE88TR2YHY&no_recurring=0&currency_code=USD\">buy me a lunch!</a>"\
+                    "<br>"\
+                    "Your support is my motivation!")
+        msg.setWindowTitle(ver + ": Buy me a LUNCH!")
+
+        returnValue = msg.exec()
 
                   
 
