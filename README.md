@@ -22,6 +22,9 @@ All other formats are lossy conversion, which convert the original data into uns
 Velox saves all types of data, including simple images, image stacks, SI data, DPC, etc, into a single emd format. While these files share the same format, the data structures are quite different. This converter has been tested for simple images, image stacks, DPC images, and EDS mapping data. For simple images, the converter just makes the conversion in the selected output directory. For image stacks and DPC images, the converter first makes a folder with the file name and converts all the image frames into that folder. For EDS mapping data, the converter converts all the image data, e.g., maps for each element, and ignores the spectra data.
 
 ## 5. Change history
+### v0.3
+- Improved UI.
+
 ### v0.2
 - Improved font settings in MacOS.
 - Now only DCFI type and EDS map files will be saved in a separate folder.
