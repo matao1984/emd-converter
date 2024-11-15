@@ -36,6 +36,8 @@ Velox saves all types of data, including simple images, image stacks, SI data, D
 ## 5. Change history
 ### v0.4
 - Rewrite the loader and writer to use the Rosetasciio instead of hyperspy.
+- Improved conversion algorithms for 8-bit image formats.
+- The new algorithm should also work for EDS maps.
 ### v0.3
 - Improved UI.
 
