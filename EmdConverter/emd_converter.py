@@ -219,14 +219,20 @@ def getFileType(file):
     file_type = file[len(full_name):]
     return file_type
 
+
 def norm_img(data):
     #Normalize a data array
+    data = data.astype('int32') #Int32 for calculation
     norm = (data - data.min())/(data.max()-data.min())
     return norm
 
+
+def save_as_tif16(input_file, f_name, output_dir):
+    input_file['data'] = input_file['data'].astype('int16')
+    tif_writer(output_dir + f_name + '.tiff', input_file)
+
 def save_with_pil(img, f_name, output_dir, f_type, scalebar=True):
-    #data = norm_img(img['data']) * 255
-    im = Image.fromarray(img['data'])
+    im = Image.fromarray(img['data'].astype('int16'))
     im = im.convert('L')
     if im.size[0] < 256:
         scalebar = False #Remove scalebar for very small images to avoid error
@@ -280,14 +286,13 @@ def save_file_as(input_file, f_name, output_dir, f_type):
     if f_type == 'tiff':
         # For tiff format, save directly as 16-bit with calibration, no scalebar
         # No manipulation of data but just set to int16
-        input_file['data'] = input_file['data'].astype('int16')
-        tif_writer(output_dir + f_name + '.' + f_type, input_file)
+        save_as_tif16(input_file, f_name, output_dir)
+
 
         
     else:
         if f_type == 'tiff + png':
-            input_file['data'] = input_file['data'].astype('int16')
-            tif_writer(output_dir + f_name + '.tiff', input_file)
+            save_as_tif16(input_file, f_name, output_dir)
             f_type = 'png'
         data = input_file['data']
         input_file['data'] = norm_img(data) * 255
@@ -322,7 +327,11 @@ def convert_file(file, output_dir, f_type):
         if not DCFI:
             #Non DCFI, convert directly
             for img in f:
-                title = img['metadata']['General']['title']
+                try:
+                    title = img['metadata']['General']['title']
+                except:
+                    title = ''
+                        
                 new_name = f_name + '_' + title
                 save_file_as(img, new_name, output_dir, f_type=f_type)
                 
@@ -332,8 +341,10 @@ def convert_file(file, output_dir, f_type):
             for img in f:
                 data = img['data']
                 metadata = img['metadata']
-                # img['data'] = data
-                title = img['metadata']['General']['title']
+                try:
+                    title = img['metadata']['General']['title']
+                except:
+                    title = ''
                 stack_num = img['data'].shape[0] #Number of stacks
                 
                 #Modify the axes
