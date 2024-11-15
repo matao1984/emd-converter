@@ -1,5 +1,5 @@
 # emd-converter
-EMD Converter is a convenient and lightweight tool to convert the FEI Velox emd files to the common image formats including tiff, jpg, png, and bmp. The tool was written by Dr. Tao Ma. For questions and suggestions, please send a message to taoma@umich.edu.
+EMD Converter is a convenient and lightweight tool to convert the FEI Velox emd files to the common image formats including tiff, jpg, png, and bmp. The tool was written by Dr. Tao Ma. For questions and suggestions, please send a message to matao1984@gmail.com.
 
 ## 1. Installation
 The tool requires Python 3 environment. I recommend to install Anaconda which is the most straightforward way. Download and install the Python 3 version of Anaconda from here: https://www.anaconda.com/.
