@@ -4,7 +4,11 @@ EMD Converter is a convenient and lightweight tool to convert the FEI Velox emd 
 ## 1. Installation
 The tool requires Python 3 environment. I recommend to install Anaconda which is the most straightforward way. Download and install the Python 3 version of Anaconda from here: https://www.anaconda.com/.
 
-After the Anaconda is installed, open the Anaconda prompt console. First, install the [Hyperspy](https://hyperspy.org/):  ``conda install hyperspy -c conda-forge``. Then, simply navigate to the ``EMD Converter\`` folder with ``cd [PATH]`` and run ``pip install ./``. The pip should install the package automatically. 
+After the Anaconda is installed, open the Anaconda prompt console. Download the ``emd-converter`` code and unzip it into a folder, e.g., ``c:\emd-converter``. Then, simply navigate to the folder and install with pip.
+
+``cd c:\emd-converter``
+``pip install ./``
+The pip should install the package automatically. 
 
 ## 2. Usage
 Simply type ``emd-con`` in the Anaconda prompt console. A GUI will pop up. Just load the emd files, set the output directory, select the output format, and click "Let's go!". 
