@@ -12,12 +12,12 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 import sys
 import os
-import numpy as np
-from skimage import exposure, img_as_ubyte
+# import numpy as np
+# from skimage import exposure, img_as_ubyte
 from PIL import Image, ImageDraw, ImageFont
 
-ver = '0.3'
-rdate = 'Jul-19-2021'
+ver = '0.4'
+rdate = 'Nov-14-2024'
 
 class Ui_EMD_converter(QtWidgets.QMainWindow):
     def __init__(self):
@@ -42,7 +42,7 @@ class Ui_EMD_converter(QtWidgets.QMainWindow):
         self.label.setObjectName("label")
         self.comboBox = QtWidgets.QComboBox(EMD_converter)
         self.comboBox.setGeometry(QtCore.QRect(130, 100, 95, 22))
-        self.comboBox.addItems(['tif + png','tif', 'png', 'jpg','bmp'])
+        self.comboBox.addItems(['tiff + png','tiff', 'png', 'jpg','bmp'])
 
         self.comboBox.setObjectName("comboBox")
         self.pushButton_2 = QtWidgets.QPushButton(EMD_converter)
@@ -140,9 +140,10 @@ class Ui_EMD_converter(QtWidgets.QMainWindow):
             scale_bar = False
         self.textEdit_3.append('Converting, please wait...') 
         QtWidgets.QApplication.processEvents()
-        for file in files:        
+        for file in files:  
+            # convert_file(file,output_dir,f_type)
             try:
-                convert_emd_with_hs(file,output_dir,f_type)
+                convert_file(file,output_dir,f_type)
                 msg = "'{}.{}' has been converted".format(getFileName(file),getFileType(file))
             except:
                 msg = "'{}.{}' has been skipped".format(getFileName(file),getFileType(file))
@@ -193,7 +194,12 @@ class Ui_EMD_converter(QtWidgets.QMainWindow):
 
 #==================================================================
 # Helper functions
-from hyperspy.io import load
+
+from rsciio.emd import file_reader as emd_reader
+from rsciio.digitalmicrograph import file_reader as dm_reader
+from rsciio.tia import file_reader as tia_reader
+from rsciio.tiff import file_writer as tif_writer
+from rsciio.image import file_writer as im_writer
 
 def getDirectory(file, s='.'):
     #Make the working directory and return the path.
@@ -213,113 +219,146 @@ def getFileType(file):
     file_type = file[len(full_name):]
     return file_type
 
-def save_emd_as(emd_file, f_name, output_dir, f_type):
+def norm_img(data):
+    #Normalize a data array
+    norm = (data - data.min())/(data.max()-data.min())
+    return norm
+
+def save_with_pil(img, f_name, output_dir, f_type, scalebar=True):
+    #data = norm_img(img['data']) * 255
+    im = Image.fromarray(img['data'])
+    im = im.convert('L')
+    if im.size[0] < 256:
+        scalebar = False #Remove scalebar for very small images to avoid error
+    if scalebar:
+        #Add a scale bar
+        im_x, im_y = im.size
+        unit = img['axes'][1]['units']
+        scale = img['axes'][1]['scale']
+        fov_x = im_x * scale
+        # Find a good integer length for the scalebar 
+        sb_len_float = fov_x / 6 #Scalebar length is about 1/6 of FOV
+        # A list of allowed lengths for the scalebar
+        sb_lst = [0.1,0.2,0.5,1,2,5,10,20,50,100,200,500,1000,2000,5000]
+        # Find the closest value in the list
+        sb_len = sorted(sb_lst, key=lambda a: abs(a - sb_len_float))[0]
+        sb_len_px = sb_len / scale
+        sb_start_x, sb_start_y = (im_x / 12, im_y * 11 / 12) #Bottom left corner from 1/12 of FOV
+        draw = ImageDraw.Draw(im)
+        sb = (sb_start_x, sb_start_y, sb_start_x + sb_len_px, sb_start_y + im_y/ 100)
+        outline_width = round(im_y/500)
+        if outline_width == 0:
+            outline_width = 1
+        draw.rectangle(sb, fill = 'white', outline = 'black', width = outline_width)
+        # Add text
+        text = str(sb_len) + ' ' + unit
+        fontsize = int(im_x / 20)
+        try: 
+            font = ImageFont.truetype("arial.ttf", fontsize)
+        except:
+            try: 
+                font = ImageFont.truetype("Helvetica.ttc", fontsize)
+            except:
+                font = ImageFont.load_default()
+        txt_x, txt_y = (sb_start_x * 1.2, sb_start_y - fontsize * 1.2 - im_y/100)
+        # Add outline to the text
+        dx = im_x / 1000
+        draw.text((txt_x-dx, txt_y-dx), text, font=font, fill='black')
+        draw.text((txt_x+dx, txt_y-dx), text, font=font, fill='black')
+        draw.text((txt_x-dx, txt_y+dx), text, font=font, fill='black')
+        draw.text((txt_x+dx, txt_y+dx), text, font=font, fill='black')
+        draw.text((txt_x, txt_y), text, fill='white', font=font, anchor=None)        
+    im.save(output_dir + f_name + '.' + f_type)
+
+def save_file_as(input_file, f_name, output_dir, f_type):
     #Save images
-    #Reset the scale and origin for the intensity
-    try:
-        emd_file.metadata.Signal.Noise_properties.Variance_linear_model.gain_factor = 1
-        emd_file.metadata.Signal.Noise_properties.Variance_linear_model.gain_offset = 0
-    except:
-        pass
+
     #Check if the output_dir exists
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     
-    if f_type == 'tif':
-        # For tif format, save directly as 16-bit with calibration, no scalebar
-        # No manipulation of data
-        emd_file.save(output_dir + f_name + '.' + f_type, overwrite=True)
+    if f_type == 'tiff':
+        # For tiff format, save directly as 16-bit with calibration, no scalebar
+        # No manipulation of data but just set to int16
+        input_file['data'] = input_file['data'].astype('int16')
+        tif_writer(output_dir + f_name + '.' + f_type, input_file)
+
         
-    elif f_type == 'tif + png' or 'jpg' or f_type == 'bmp' or f_type == 'png':
-        #Rescale and convert the data to uint8
-        data = img_as_ubyte(exposure.rescale_intensity(emd_file.data))
-        im = Image.fromarray(data)
-        if scale_bar == True:
-            #Add a scale bar
-            im_x, im_y = im.size
-            scale = emd_file.axes_manager[0].scale
-            unit = emd_file.axes_manager[0].units
-            fov_x = im_x * scale
-            # Find a good integer length for the scalebar 
-            sb_len_float = fov_x / 6 #Scalebar length is about 1/6 of FOV
-            # A list of allowed lengths for the scalebar
-            sb_lst = [0.1,0.2,0.5,1,2,5,10,20,50,100,200,500,1000,2000,5000]
-            # Find the closest value in the list
-            sb_len = sorted(sb_lst, key=lambda a: abs(a - sb_len_float))[0]
-            sb_len_px = sb_len / scale
-            sb_start_x, sb_start_y = (im_x / 12, im_y *11 / 12) #Bottom left corner from 1/12 of FOV
-            draw = ImageDraw.Draw(im)
-            sb = (sb_start_x, sb_start_y, sb_start_x + sb_len_px, sb_start_y + im_y/ 100)
-            outline_width = round(im_y/500)
-            if outline_width == 0:
-                outline_width = 1
-            draw.rectangle(sb, fill = 'white', outline = 'black', width = outline_width)
-            # Add text
-            text = str(sb_len) + ' ' + unit
-            fontsize = int(im_x / 20)
-            try: 
-                font = ImageFont.truetype("arial.ttf", fontsize)
-            except:
-                try: 
-                    font = ImageFont.truetype("Helvetica.ttc", fontsize)
-                except:
-                    font = ImageFont.load_default()
-            txt_x, txt_y = (sb_start_x * 1.2, sb_start_y - fontsize * 1.2 - im_y/100)
-            # Add outline to the text
-            draw.text((txt_x-1, txt_y-1), text, font=font, fill='black')
-            draw.text((txt_x+1, txt_y-1), text, font=font, fill='black')
-            draw.text((txt_x-1, txt_y+1), text, font=font, fill='black')
-            draw.text((txt_x+1, txt_y+1), text, font=font, fill='black')
-            draw.text((txt_x, txt_y), text, fill='white', font=font, anchor=None)
-        if f_type == 'tif + png':
-            emd_file.save(output_dir + f_name + '.tif', overwrite=True)
+    else:
+        if f_type == 'tiff + png':
+            input_file['data'] = input_file['data'].astype('int16')
+            tif_writer(output_dir + f_name + '.tiff', input_file)
             f_type = 'png'
-            
-        im.save(output_dir + f_name + '.' + f_type)
+        data = input_file['data']
+        input_file['data'] = norm_img(data) * 255
+        save_with_pil(input_file, f_name, output_dir, f_type, scalebar=scale_bar)
         
         
-def convert_emd_with_hs(file, output_dir, f_type):
+        
+def convert_file(file, output_dir, f_type):
     #f_type: The file type to be saved. e.g., '.tif', '.png', '.jpg' 
     #
-    f_emd = load(file,lazy=True)
     f_name = getFileName(file)
-    if len(f_emd) == 1: #Single file, the simplest dataset
-        if f_emd.axes_manager.signal_dimension == 2:
-            save_emd_as(f_emd, f_name, output_dir, f_type=f_type)
-    else:
-        for idx in range(len(f_emd)):
-            if len(f_emd[idx]) != 1:
-                DCFI = 1
-                break
-            else:
-                DCFI = 0
-        if DCFI == 0:#EMD file contains multiple images, e.g., HAADF, BF, DF2,...
-            for idx in range(len(f_emd)):
-                if f_emd[idx].axes_manager.signal_dimension == 2:#This is a 2D image
-                    title = f_emd[idx].metadata.General.title
-                    new_name = f_name + '_' + title
-                    save_emd_as(f_emd[idx], new_name, output_dir, f_type=f_type)
-
-        if DCFI == 1:#Make a folder for DCFI type images
-            new_dir = output_dir + f_name + '/'
-            for idx in range(len(f_emd)):
-#                print('idx={}'.format(idx))
-                if f_emd[idx].axes_manager.signal_dimension == 2:#This is a 2D image
-                    title = f_emd[idx].metadata.General.title
-                    s_lst = list(f_emd[idx])
-                    for i_idx in range(len(s_lst)):
-#                        print('i_idx={}'.format(i_idx))
-                        new_name = '{}_{}_{}'.format(title, idx, i_idx)
-                        save_emd_as(s_lst[i_idx], new_name, new_dir, f_type=f_type)
-
-            
-
+    input_type = getFileType(file)
+    
+    #Load emd file:
+    if input_type == 'emd':
+        f = emd_reader(file, select_type = 'images')
+    
+    #Load dm file:
+    elif input_type in ['dm3', 'dm4']:
+        f = dm_reader(file)
+    
+    #Load TIA file
+    elif input_type == 'ser':
+        f = tia_reader(file)
         
+    if len(f) != 0: #Valid input containing at least one image
+        if f[0]['data'].ndim == 3:
+            DCFI = True
+        else:
+            DCFI = False
+    
+        if not DCFI:
+            #Non DCFI, convert directly
+            for img in f:
+                title = img['metadata']['General']['title']
+                new_name = f_name + '_' + title
+                save_file_as(img, new_name, output_dir, f_type=f_type)
+                
+        else:
+            #DCFI images, convert into a folder
+            new_dir = output_dir + f_name + '/'
+            for img in f:
+                data = img['data']
+                metadata = img['metadata']
+                # img['data'] = data
+                title = img['metadata']['General']['title']
+                stack_num = img['data'].shape[0] #Number of stacks
+                
+                #Modify the axes
+                axes = img['axes']
+                axes.pop(0)
+                axes[0]['index_in_array'] = 0
+                axes[1]['index_in_array'] = 1
+                
+                
+                for idx in range(stack_num):
+                    new_img = {'data': data[idx],
+                               'axes': axes,
+                               'metadata': metadata
+                        }
+                    new_name = title + '_{}'.format(idx)
+                   
+                    save_file_as(new_img, new_name, new_dir, f_type)
+                
+                    
+                    
+                            
 
 
 #====Application entry==================================
 def main():
-    import sys
     app = QtWidgets.QApplication(sys.argv)
     EMD_converter = QtWidgets.QWidget()
     ui = Ui_EMD_converter()
