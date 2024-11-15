@@ -6,7 +6,7 @@ The tool requires Python 3 environment. I recommend to install Anaconda which is
 
 After the Anaconda is installed, open the Anaconda prompt console. Create an environment with python 3.12.
 
-``conda create -n emd-converter python=3.12\n
+``conda create -n emd-converter python=3.12/n
 conda activate emd-converter``
 
 Download the ``emd-converter`` code and unzip it into a folder, e.g., ``c:\emd-converter``. Then, simply navigate to the folder and install with pip.
