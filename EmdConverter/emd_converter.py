@@ -228,8 +228,9 @@ def norm_img(data):
 
 
 def save_as_tif16(input_file, f_name, output_dir):
-    input_file['data'] = input_file['data'].astype('int16')
-    tif_writer(output_dir + f_name + '.tiff', input_file)
+    img = input_file.copy()
+    img['data'] = img['data'].astype('int16')
+    tif_writer(output_dir + f_name + '.tiff', img)
 
 def save_with_pil(img, f_name, output_dir, f_type, scalebar=True):
     im = Image.fromarray(img['data'].astype('int16'))
